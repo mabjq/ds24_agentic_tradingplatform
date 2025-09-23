@@ -1,6 +1,6 @@
 # Agentic AI Trading Platform for Commodities
 
-![Project Overview](ai-trading.jpg)
+![Project Overview](ai-trading_en.png)
 *Diagram of ETL flow (core) and advanced agents (sentiment + optimization).*
 
 ## Project Overview
