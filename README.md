@@ -61,7 +61,7 @@ Run: `python populate_historical.py --days 60` (backfill), then `python -m app.m
 
 ## Detailed ETL Pipeline
 
-![ETL flow](etl_trading01.png)
+![ETL flow](etl_trading01.jpg)
 *Diagram of ETL flow.*
 
 The ETL flow (see the Excalidraw image above for a visual overview) is modular for reliability:
