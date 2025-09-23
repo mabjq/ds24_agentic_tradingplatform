@@ -18,6 +18,7 @@ Goals:
 - Good code with type hints, docstrings, and modular structure.
 
 ## Project Structure
+```
 ai_trading_platform/
 ├── app/
 │   ├── init.py
@@ -46,6 +47,7 @@ ai_trading_platform/
 │   └── test_*.py        # Pytest suite
 ├── requirements.txt     # Dependencies
 └── README.md            # This file
+```
 
 ## Quick Start 
 The ETL flow is a linear pipeline for fetching, cleaning, and analyzing KC=F data on a 30-min interval:
@@ -59,7 +61,7 @@ Run: `python populate_historical.py --days 60` (backfill), then `python -m app.m
 
 ## Detailed ETL Pipeline
 
-![ETL flow](etl-trading01.png)
+![ETL flow](etl_trading01.png)
 *Diagram of ETL flow.*
 
 The ETL flow (see the Excalidraw image above for a visual overview) is modular for reliability:
