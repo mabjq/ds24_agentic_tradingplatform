@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 import logging
-import pandas as pd
 from app.data_fetch import fetch_data
 from app.database import save_to_database, init_database
 from app.logger import setup_logging
