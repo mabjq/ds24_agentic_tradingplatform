@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import Optional
 
 def setup_logging(log_path: Path, level: str = "INFO") -> logging.Logger:
     """Set up centralized logging configuration."""
