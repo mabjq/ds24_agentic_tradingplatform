@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, FilePath
 
 class TradingConfig(BaseModel):
@@ -74,7 +74,3 @@ class AppConfig(BaseModel):
         extra="forbid",
         arbitrary_types_allowed=True
     )
-
-def load_config() -> AppConfig:
-    """Load and validate application configuration."""
-    return AppConfig()
