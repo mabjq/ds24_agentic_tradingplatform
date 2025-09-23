@@ -1,6 +1,6 @@
 # Agentic AI Trading Platform for Commodities
 
-![Project Overview](ai-trading.png)
+![Project Overview](ai-trading.jpg)
 *Diagram of ETL flow (core) and advanced agents (sentiment + optimization).*
 
 ## Project Overview
@@ -61,7 +61,7 @@ Run: `python populate_historical.py --days 60` (backfill), then `python -m app.m
 
 ## Detailed ETL Pipeline
 
-![ETL flow](etl_trading01.jpg)
+![ETL flow](etl_trading01.png)
 *Diagram of ETL flow.*
 
 The ETL flow (see the Excalidraw image above for a visual overview) is modular for reliability:
