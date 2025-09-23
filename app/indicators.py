@@ -1,7 +1,6 @@
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
-from typing import Optional
 import logging
 from config.config import AppConfig
 
@@ -88,7 +87,6 @@ def find_swing_high_low(df: pd.DataFrame, order: int = 55) -> pd.DataFrame:
     df = df.copy()
     df['swing_high'] = df['High'].rolling(window=order, min_periods=1).max().shift(1)
     df['swing_low'] = df['Low'].rolling(window=order, min_periods=1).min().shift(1)
-    # NaN preserved for early bars or gaps
     logger.info(f"Computed swing high/low with order {order} (raw, no fill).")
     return df
 
