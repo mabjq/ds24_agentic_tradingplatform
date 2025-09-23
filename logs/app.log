@@ -1,0 +1,25 @@
+2025-09-22 20:50:38,619 - __main__ - INFO - Starting Agentic AI Trading Platform with Gaussian + Kijun Strategy
+2025-09-22 20:50:38,620 - app.database - INFO - Initialized database at data/trading.db
+2025-09-22 20:50:38,620 - app.data_fetch - INFO - Fetching data for KC=F from 2025-07-24 20:50:38.620068 to 2025-09-22 20:50:38.620068 with timeframe 30m
+2025-09-22 20:50:39,750 - app.data_fetch - INFO - Removed 0 invalid rows (high = low or NaN) during fetch, 772 rows remain.
+2025-09-22 20:50:39,750 - app.data_fetch - INFO - Successfully fetched 772 rows for KC=F
+2025-09-22 20:50:39,767 - app.database - INFO - Saved 772 rows to database for KC=F (duplicates ignored)
+2025-09-22 20:50:39,767 - __main__ - INFO - ETL: Data fetched and saved
+2025-09-22 20:50:39,769 - app.database - INFO - Fetched 829 rows from database for KC=F
+2025-09-22 20:50:39,771 - app.transform - INFO - Dropped 0 rows with NaN or invalid values (high=low or volume=0).
+2025-09-22 20:50:39,771 - app.transform - INFO - Removed outliers, 829 rows remain.
+2025-09-22 20:50:39,771 - app.transform - INFO - Data cleaning complete: 829 rows after processing (raw with gaps preserved).
+2025-09-22 20:50:39,773 - app.indicators - INFO - Computed ATR with period 14.
+2025-09-22 20:50:39,774 - app.indicators - INFO - Computed Gaussian Channel (triple EMA) with period 34.
+2025-09-22 20:50:39,774 - app.indicators - INFO - Computed Kijun-Sen with period 125.
+2025-09-22 20:50:39,775 - app.indicators - INFO - Computed VAPI (EMA version, price scale) with period 13.
+2025-09-22 20:50:39,777 - app.indicators - INFO - Computed ADX with period 14.
+2025-09-22 20:50:39,789 - app.indicators - INFO - Computed SMMA with period 200 on Close.
+2025-09-22 20:50:39,789 - app.indicators - INFO - Computed swing high/low with order 55 (raw, no fill).
+2025-09-22 20:50:39,789 - app.transform - INFO - Transformation complete: 829 rows with indicators for KC=F
+2025-09-22 20:50:39,789 - __main__ - INFO - ETL: Data transformed with indicators
+2025-09-22 20:50:39,799 - app.backtest - INFO - Saved backtest input to results/reports/backtest_input.csv (829 rows)
+2025-09-22 20:50:39,800 - app.backtest - INFO - Starting backtest...
+2025-09-22 20:50:39,912 - app.visualize - INFO - Added ATR bands to plot (trailing stop levels)
+2025-09-22 20:50:40,225 - app.visualize - INFO - Trade plot saved to: results/plots/backtest_chart.png (Long^/Shortv/TP1/ExitO)
+2025-09-22 20:50:40,225 - __main__ - INFO - Backtest completed: {'final_value': 105648.42451477051, 'pnl': 5648.424514770508, 'pnl_percent': 5.648424514770508, 'max_drawdown_percent': 0.9474048172433629, 'total_trades': 10, 'percent_profitable': 80.0, 'profit_factor': 16.06603516365882}
