@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from typing import Optional
 from datetime import datetime
 import logging
@@ -10,7 +9,11 @@ from config.config import AppConfig
 logger = logging.getLogger(__name__)
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean OHLCV DataFrame: remove invalid rows, outliers, ensure correct data types, and sort by date."""
+    """Clean OHLCV DataFrame: remove invalid rows, outliers, ensure correct data types, and sort by date.
+    Removes NaN, rows where volume=0 or high=low, and outliers (>5 standard deviations). 
+    Preserves gaps (no forward-filling) for authentic backtesting.
+    Part of the Transform step in ETL, processing data fetched from database.py.
+    """
     df = df.copy()
     initial_rows = len(df)
 
@@ -41,7 +44,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def transform_data(config: AppConfig, ticker: str, start_date: Optional[datetime] = None,
                   end_date: Optional[datetime] = None) -> Optional[pd.DataFrame]:
-    """Full transformation pipeline: fetch from DB, clean, and calculate indicators."""
+    """Full transformation pipeline: fetch from DB, clean, and calculate indicators.
+    Fetches raw OHLCV data from database.py, cleans it with clean_data(), and adds
+    indicators (Gaussian, Kijun, VAPI, ADX, ATR, SMMA, swing) via indicators.py.
+    Part of the Transform step in ETL, preparing data for backtest.py.
+    """
     raw_df = fetch_from_database(config=config, ticker=ticker, start_date=start_date, end_date=end_date)
     if raw_df is None or raw_df.empty:
         logger.error(f"No raw data found for {ticker}")
