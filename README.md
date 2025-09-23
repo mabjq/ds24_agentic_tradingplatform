@@ -1,7 +1,7 @@
 # Agentic AI Trading Platform for Commodities
 
 ![Project Overview](ai-trading_en.png)
-*Diagram of ETL flow (core) and advanced agents (sentiment + optimization).*
+*Diagram of ETL core and advanced agents (sentiment + optimization).*
 
 ## Project Overview
 A Python-based trading platform for commodity futures (focus: Coffee KC=F), built as a project for Data Scientist coursework. Core focus: Robust ETL pipeline with yfinance for data, pandas for processing, SQLite for storage, and backtrader for strategy backtesting. Strategy: "Gaussian + Kijun + VAPI + ATR + SMMA 200" on 30-min timeframe.
@@ -15,7 +15,7 @@ Deployment: Ubuntu LXC container in homelab (GMKTec G3 with Proxmox) for snapsho
 Goals:
 - Validate strategy via backtesting (target: >60% winrate, <10% drawdown).
 - Extensible for other commodities (e.g., Brent BZ=F).
-- Good code with type hints, docstrings, and modular structure.
+- Clean code with type hints, docstrings, and modular structure.
 
 ## Project Structure
 ```
@@ -104,9 +104,9 @@ The flow is event-driven (backtrader) for futures simulation, with logging throu
 ## Usage
 - **Historical backfill**: `python populate_historical.py --days 60`
 - **Full run**: `python -m app.main` (ETL + backtest)
-- **Automation**: `python app/automate.py` (daglig kl. 20:00)
+- **Automation**: `python app/automate.py` (daily at 20:00)
 - **Tests**: `pytest tests/ -v`
-- **Plot**: `results/plots/backtest_chart.png` (sista 3 dagar med ATR-band, trades).
+- **Plot**: `results/plots/backtest_chart.png` (last 3 days with ATR-bands, trades).
 
 For advanced extension  (project course): See `sentiment.py` and `agents.py` for X sentiment + AutoGen optimization later on.
 
