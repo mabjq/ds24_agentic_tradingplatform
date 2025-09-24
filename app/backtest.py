@@ -1,8 +1,7 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import backtrader as bt
 import pandas as pd
 import logging
-from datetime import datetime
 from backtrader.utils import num2date
 from config.config import AppConfig
 from app.strategies import GaussianKijunStrategy
