@@ -3,7 +3,10 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, FilePath
 
 class TradingConfig(BaseModel):
-    """Configuration for trading parameters."""
+    """Configuration for trading parameters.
+    Defines core strategy settings like ticker, periods for indicators,
+    risk management, and backtest options. Used across ETL and strategy modules.
+    """
     ticker: str = "KC=F"  # Coffee futures
     timeframe: str = "30m"  # 30-minute timeframe
     gaussian_period: int = 34
@@ -31,7 +34,12 @@ class TradingConfig(BaseModel):
     )
 
 class DatabaseConfig(BaseModel):
-    """Configuration for database settings."""
+    """Configuration for database settings.
+    Specifies SQLite path for storing raw OHLCV data in ETL Load step.
+
+    Fields:
+        db_path: FilePath = Path("data/trading.db") 
+    """
     db_path: FilePath = Path("data/trading.db")
 
     model_config = ConfigDict(
@@ -41,7 +49,13 @@ class DatabaseConfig(BaseModel):
     )
 
 class APIConfig(BaseModel):
-    """Configuration for external APIs."""
+    """Configuration for external APIs.
+    Placeholder for future integrations like xAI and Twitter for sentiment analysis.
+
+    Fields:
+        xai_api_key: Optional[str] = None 
+        twitter_api_key: Optional[str] = None  
+    """
     xai_api_key: Optional[str] = None
     twitter_api_key: Optional[str] = None
 
@@ -52,7 +66,13 @@ class APIConfig(BaseModel):
     )
 
 class LoggingConfig(BaseModel):
-    """Configuration for logging."""
+    """Configuration for logging.
+    Sets up centralized logging for ETL and backtest traces.
+
+    Fields:
+        app_log_path: FilePath = Path("logs/app.log")  
+        log_level: str = "INFO"  # Logging level (e.g., "DEBUG", "INFO", "ERROR").
+    """
     app_log_path: FilePath = Path("logs/app.log")
     log_level: str = "INFO"  
 
@@ -63,7 +83,16 @@ class LoggingConfig(BaseModel):
     )
 
 class AppConfig(BaseModel):
-    """Main application configuration."""
+    """Main application configuration.
+    Aggregates sub-configs for trading, database, API, and logging.
+    Used as central config in ETL pipeline and strategy.
+
+    Fields:
+        trading: TradingConfig = TradingConfig()
+        database: DatabaseConfig = DatabaseConfig()
+        api: APIConfig = APIConfig() 
+        logging: LoggingConfig = LoggingConfig() 
+    """
     trading: TradingConfig = TradingConfig()
     database: DatabaseConfig = DatabaseConfig()
     api: APIConfig = APIConfig()
