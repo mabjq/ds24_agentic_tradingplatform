@@ -11,8 +11,12 @@ from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def mock_raw_df() -> pd.DataFrame:
-    """Fixture for raw OHLCV data with some invalid rows (150 bars for Kijun 125)."""
-    dates = pd.date_range(start='2025-01-01', periods=300, freq='30min')  # 1300 bars for Kijun 125
+    """Fixture for raw OHLCV data with some invalid rows (150 bars for Kijun 125).
+
+    Returns:
+        pd.DataFrame: Mock raw data with NaN, zero volume, and high=low rows for cleaning tests.
+    """
+    dates = pd.date_range(start='2025-01-01', periods=300, freq='30min')  # 300 bars for Kijun 125
     n = len(dates)
     
     # Generate data with some invalid rows
@@ -40,7 +44,9 @@ def mock_raw_df() -> pd.DataFrame:
     })
 
 def test_clean_data_removes_invalid(mock_raw_df: pd.DataFrame) -> None:
-    """Test clean_data removes NaN, volume=0, high=low rows."""
+    """Test clean_data removes NaN, volume=0, high=low rows.
+    Verifies row reduction, no remaining invalid values, and no NaN after cleaning.
+    """
     initial_len = len(mock_raw_df)
     cleaned_df = clean_data(mock_raw_df)
     final_len = len(cleaned_df)
@@ -52,7 +58,9 @@ def test_clean_data_removes_invalid(mock_raw_df: pd.DataFrame) -> None:
     assert cleaned_df['Open'].isna().sum() == 0  # No NaN after cleaning
 
 def test_transform_data_full_pipeline(mock_raw_df: pd.DataFrame, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test full transform: clean + indicators (with sufficient data for all indicators)."""
+    """Test full transform: clean + indicators (with sufficient data for all indicators).
+    Mocks fetch_from_database and verifies indicators added, non-None result, and NaN thresholds.
+    """
     config = AppConfig()
     
     # Mock fetch_from_database to return mock_raw_df
@@ -80,7 +88,7 @@ def test_transform_data_full_pipeline(mock_raw_df: pd.DataFrame, monkeypatch: py
             assert non_null_count >= min_non_null, f"{indicator} should have values after period, got {non_null_count}/{total_rows}"
         elif indicator in ['smma']:  # Period 200
             min_non_null = max(0, total_rows - 200)
-            assert non_null_count >= min_non_null, f"{smma} should have values after period, got {non_null_count}/{total_rows}"
+            assert non_null_count >= min_non_null, f"{indicator} should have values after period, got {non_null_count}/{total_rows}"
         else:  # Shorter periods (gauss=34, adx=14, etc.)
             assert non_null_count > total_rows * 0.8, f"{indicator} should have >80% values, got {non_null_count}/{total_rows}"
         

@@ -1,4 +1,4 @@
-""" tests/test_backtest.py: not finished."""
+"""Tests for backtest.py: Verify run_backtest execution, metrics extraction, and plot generation."""
 
 import pytest
 import pandas as pd
@@ -9,7 +9,11 @@ from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def mock_df() -> pd.DataFrame:
-    """Fixture for mock OHLCV + indicators."""
+    """Fixture for mock OHLCV + indicators.
+
+    Returns:
+        pd.DataFrame: Sample DataFrame with required columns for backtest.
+    """
     dates = pd.date_range(start='2025-01-01', periods=10, freq='30min')
     return pd.DataFrame({
         'Date': dates,
@@ -28,22 +32,26 @@ def mock_df() -> pd.DataFrame:
         'swing_low': [95.0] * 10
     })
 
-@pytest.mark.skip(reason="Backtest function is not testable yet.")
-@patch('app.backtest.plot_with_trades')
-def test_run_backtest_success_isolated(mock_savefig: MagicMock, mock_plot: MagicMock, mock_df: pd.DataFrame, tmp_path: Path) -> None:
-    """Test run_backtest completes without affecting production files."""
+def test_run_backtest_success_isolated(mock_df: pd.DataFrame, tmp_path: Path) -> None:
+    """Test run_backtest completes without affecting production files.
+    Mocks plot and CSV saves to isolate execution and verify metrics output.
+    Ensures summary dict is returned and plot is called (fallback for no trades).
+    """
     config = AppConfig()
 
-    output_dir = tmp_path / "backtest_results"
-    
-    with patch('app.backtest.save_results') as mock_save_results:
-        mock_save_results.return_value = None
-        
+    with patch('app.backtest.plot_with_trades') as mock_plot, \
+         patch('pandas.DataFrame.to_csv') as mock_to_csv:
+
         summary = run_backtest(mock_df, config)
 
+        # Verify summary dict
         assert 'final_value' in summary
         assert summary['total_trades'] >= 0
         assert summary['pnl_percent'] is not None
 
+        # Plot should always be called, even with empty trades (fallback 150 bars)
         mock_plot.assert_called_once()
-        mock_save_results.assert_called_once()
+
+        # CSV writes should have been attempted
+        assert mock_to_csv.call_count >= 1
+
