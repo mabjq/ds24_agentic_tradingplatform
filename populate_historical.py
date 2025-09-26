@@ -8,10 +8,20 @@ from config.config import AppConfig
 logger = logging.getLogger(__name__)
 
 def populate_historical_data(config: AppConfig, days: int = 60) -> None:
-    """Fetch and store historical raw data for backtesting. No cleaning/filling to preserve gaps."""
+    """Fetch and store historical raw data for backtesting. No cleaning/filling to preserve gaps.
+    Caps days at 730 for yfinance intraday limits, initializes DB, fetches via data_fetch.py,
+    and saves to database.py. Used for initial backfill before full ETL runs.
+
+    Args:
+        config: Application configuration for ticker, logging, and database.
+        days: Number of days to fetch (default: 60, capped at 730).
+
+    Returns:
+        None: Logs success or failure.
+    """
     setup_logging(log_path=config.logging.app_log_path, level=config.logging.log_level)
 
-    # Cap days for intraday
+    # Cap days for intraday (precaution)
     max_days = 730
     if days > max_days:
         days = max_days

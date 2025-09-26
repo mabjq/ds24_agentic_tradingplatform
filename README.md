@@ -1,7 +1,6 @@
 # Agentic AI Trading Platform for Commodities
 
-![Project Overview](ai-trading_en.png)
-
+![Project Overview](ai-trading.png)
 *Diagram of ETL core and advanced agents (sentiment + optimization).*
 
 ## Project Overview
@@ -14,7 +13,7 @@ Tech stack: Python 3.12, yfinance, pandas-ta, backtrader, schedule, matplotlib, 
 Deployment: Ubuntu LXC container in homelab (GMKTec G3 with Proxmox) for snapshots/backups.
 
 Goals:
-- Validate strategy via backtesting (target: >60% winrate, <10% drawdown).
+- Validate strategy via backtesting.
 - Extensible for other commodities (e.g., Brent BZ=F).
 - Clean code with type hints, docstrings, and modular structure.
 
@@ -62,14 +61,14 @@ Run: `python populate_historical.py --days 60` (backfill), then `python -m app.m
 
 ## Detailed ETL Pipeline
 
-![ETL flow](etl_trading01.png)
+![ETL flow](etl-trading01.png)
 *Diagram of ETL flow.*
 
 The ETL flow (see the Excalidraw image above for a visual overview) is modular for reliability:
 
 1. **Data Fetch (`app/data_fetch.py`)**:
    - Fetches OHLCV for KC=F via yfinance (interval='30m', lookback=60 days).
-   - Handles DatetimeIndex, timezone-naive, basic validation (high != low, volume >0).
+   - Handles DatetimeIndex, timezone-naive.
    - Returns pd.DataFrame or None on error.
 
 2. **Database Operations (`app/database.py`)**:
@@ -107,7 +106,7 @@ The flow is event-driven (backtrader) for futures simulation, with logging throu
 - **Full run**: `python -m app.main` (ETL + backtest)
 - **Automation**: `python app/automate.py` (daily at 20:00)
 - **Tests**: `pytest tests/ -v`
-- **Plot**: `results/plots/backtest_chart.png` (last 3 days with ATR-bands, trades).
+- **Plot**: `results/plots/backtest_chart.png` (last 10 days with ATR-bands, trades).
 
 For advanced extension  (project course): See `sentiment.py` and `agents.py` for X sentiment + AutoGen optimization later on.
 
