@@ -6,18 +6,58 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+def _nearest_index(df: pd.DataFrame, ts: pd.Timestamp) -> pd.Timestamp:
+    """Find nearest datetime index in df to given timestamp.
+
+    Args:
+        df: DataFrame with datetime index.
+        ts: Timestamp to find nearest index for.
+
+    Returns:
+        pd.Timestamp: Nearest index timestamp, or None if df is empty.
+    """
+    if df.empty:
+        return None
+    return df.index[(df.index.get_indexer([ts], method="nearest"))[0]]
+
 def plot_with_trades(df_input: pd.DataFrame, trades: pd.DataFrame, symbol: str, save_path: str):
     """
     Generate and save a candlestick chart with indicators, ATR bands, and trade signals.
-    Limits to the last 150 bars for visual clarity. Displays indicators (gauss, kijun, smma, adx, atr)
-    and marks trades with long (^, lime), short (v, red), partial exit (o, orange, 40%), and full exit (o, orange).
-    Supports both: - transactions df (columns: date, price, side) - trades_detailed df
-    (columns: entry_date, exit_date, entry_price, exit_price). Called by backtest.py to
-    visualize the strategy's performance as the final step in the ETL pipeline.
+    Zooms to the region covering trades (max 10 days), or falls back to last 150 bars if no trades.
+    Part of the visualization step in ETL, called by backtest.py.
+
+    Args:
+        df_input: Input DataFrame with OHLCV, indicators, and 'date' column from transform.py.
+        trades: DataFrame with trade details ( entry_date, exit_date, entry_price, exit_price).
+        symbol: Ticker symbol ('KC=F') for plot title.
+        save_path: File path to save the plot PNG.
+
+    Returns:
+        None: Saves plot to save_path.
     """
     df = df_input.copy()
     df.columns = [c.lower() for c in df.columns]
-    df = df.tail(150).set_index('date')
+
+    # Ensure datetime index without tz
+    df['date'] = pd.to_datetime(df['date']).dt.tz_localize(None)
+    df = df.set_index('date')
+
+    trades = trades.copy()
+    if 'entry_date' in trades.columns and 'exit_date' in trades.columns:
+        trades['entry_date'] = pd.to_datetime(trades['entry_date']).dt.tz_localize(None)
+        trades['exit_date'] = pd.to_datetime(trades['exit_date']).dt.tz_localize(None)
+
+    # Limit visible window
+    if not trades.empty and 'entry_date' in trades.columns:
+        visible_start = trades['entry_date'].min()
+        visible_end = trades['exit_date'].max()
+        if (visible_end - visible_start) > pd.Timedelta(days=10):
+            visible_start = visible_end - pd.Timedelta(days=10)
+        df = df[(df.index >= visible_start) & (df.index <= visible_end)]
+        logger.info(f"Plot window set from {visible_start} to {visible_end}")
+    else:
+        df = df.tail(150)
+        logger.info("No trades found -> fallback to last 150 bars")
 
     add_plots: List[dict] = []
 
@@ -45,52 +85,25 @@ def plot_with_trades(df_input: pd.DataFrame, trades: pd.DataFrame, symbol: str, 
     df['full_exit'] = np.nan
 
     if 'entry_date' in trades.columns and 'exit_date' in trades.columns:
-        # trades_detailed-format
-        trades = trades.copy()
-        trades['entry_date'] = pd.to_datetime(trades['entry_date'])
-        trades['exit_date'] = pd.to_datetime(trades['exit_date'])
-        visible_start, visible_end = df.index.min(), df.index.max()
-        trades = trades[(trades['entry_date'] >= visible_start) & (trades['entry_date'] <= visible_end)]
-
         for _, row in trades.iterrows():
             entry_dt, exit_dt = row['entry_date'], row['exit_date']
-            is_long = row['entry_price'] < row['exit_price']
+            entry_idx = _nearest_index(df, entry_dt)
+            exit_idx = _nearest_index(df, exit_dt)
 
-            if entry_dt in df.index:
-                df.at[entry_dt, 'long_entry' if is_long else 'short_entry'] = (
-                    df.at[entry_dt, 'low']*0.99 if is_long else df.at[entry_dt, 'high']*1.01
+            if entry_idx is not None and entry_idx in df.index:
+                is_long = row['entry_price'] < row['exit_price']
+                df.at[entry_idx, 'long_entry' if is_long else 'short_entry'] = (
+                    df.at[entry_idx, 'low']*0.99 if is_long else df.at[entry_idx, 'high']*1.01
                 )
-            mid_dt = entry_dt + (exit_dt - entry_dt)/2
-            if mid_dt in df.index:
-                df.at[mid_dt, 'partial_exit'] = df.at[mid_dt, 'close']
-            if exit_dt in df.index:
-                df.at[exit_dt, 'full_exit'] = df.at[exit_dt, 'close']
+            if exit_idx is not None and exit_idx in df.index:
+                df.at[exit_idx, 'full_exit'] = df.at[exit_idx, 'close']
 
-    elif 'date' in trades.columns and 'side' in trades.columns:
-        # transactions-format
-        trades = trades.copy()
-        trades['date'] = pd.to_datetime(trades['date'])
-        trades = trades[trades['date'].between(df.index.min(), df.index.max())]
+            logger.info(
+                f"Trade {row.get('trade_id', '?')} "
+                f"entry {entry_dt}→{entry_idx}, exit {exit_dt}→{exit_idx}"
+            )
 
-        current_pos = 0
-        for _, row in trades.iterrows():
-            dt, side = row['date'], row['side']
-            if dt not in df.index:
-                continue
-            if side == 'buy':
-                if current_pos == 0:
-                    df.at[dt, 'long_entry'] = df.at[dt, 'low']*0.99
-                else:
-                    df.at[dt, 'partial_exit'] = df.at[dt, 'close']
-                current_pos += 1
-            else:
-                current_pos -= 1
-                if current_pos == 0:
-                    df.at[dt, 'full_exit'] = df.at[dt, 'close']
-                else:
-                    df.at[dt, 'partial_exit'] = df.at[dt, 'close']
-
-    # Addplots
+    # Addplots for trades
     if not pd.isna(df['long_entry']).all():
         add_plots.append(mpf.make_addplot(df['long_entry'], type='scatter', marker='^', color='lime', markersize=100))
     if not pd.isna(df['short_entry']).all():
@@ -103,11 +116,17 @@ def plot_with_trades(df_input: pd.DataFrame, trades: pd.DataFrame, symbol: str, 
     try:
         mpf.plot(
             df, type='candle', style='charles',
-            title=f"{symbol} - Backtest (Last 3 Days) - ATR Bands",
+            title=f"{symbol} - Backtest (Zoomed) - ATR Bands",
             ylabel='Price ($)', volume=True, panel_ratios=(3, 1, 1),
             addplot=add_plots, figscale=1.5,
             savefig=dict(fname=save_path, dpi=150)
         )
-        logger.info(f"Trade plot saved to: {save_path} (Long^/Shortv/TP1/ExitO)")
+        logger.info(
+            f"Trade plot saved to: {save_path} "
+            f"(Long^/Shortv/ExitO) | "
+            f"Markers set -> Long: {df['long_entry'].count()}, "
+            f"Short: {df['short_entry'].count()}, "
+            f"Full exits: {df['full_exit'].count()}"
+        )
     except Exception as e:
         logger.error(f"Failed to generate plot: {e}")

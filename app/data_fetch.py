@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 
 def fetch_data(config: AppConfig, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Optional[pd.DataFrame]:
     """Fetch OHLCV data for the specified ticker and timeframe from yfinance.
-    This function focuses on extraction, with minimal initial validation.
-    Detailed cleaning is handled in the transform module.
+    Focuses on extraction, detailed cleaning is handled in the transform module.
 
     Args:
         config: Application configuration containing ticker and timeframe.
@@ -46,11 +45,6 @@ def fetch_data(config: AppConfig, start_date: Optional[datetime] = None, end_dat
             data = data.reset_index()
             data.rename(columns={"Datetime": "Date"}, inplace=True)
             data['Date'] = pd.to_datetime(data['Date']).dt.tz_localize(None)
-
-       # Basic validation: remove invalid rows, keep gaps
-        initial_rows = len(data)
-        data = data[data['High'] != data['Low']].dropna(subset=['Date', 'Open', 'High', 'Low', 'Close', 'Volume'])
-        logger.info(f"Removed {initial_rows - len(data)} invalid rows (high = low or NaN) during fetch, {len(data)} rows remain.")
 
         logger.info(f"Successfully fetched {len(data)} rows for {config.trading.ticker}")
         return data

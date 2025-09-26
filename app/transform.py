@@ -13,6 +13,12 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     Removes NaN, rows where volume=0 or high=low, and outliers (>5 standard deviations). 
     Preserves gaps (no forward-filling) for authentic backtesting.
     Part of the Transform step in ETL, processing data fetched from database.py.
+
+    Args:
+        df: Input DataFrame with raw OHLCV data from database.py.
+
+    Returns:
+        pd.DataFrame: Cleaned DataFrame, sorted by Date with gaps preserved.
     """
     df = df.copy()
     initial_rows = len(df)
@@ -48,6 +54,15 @@ def transform_data(config: AppConfig, ticker: str, start_date: Optional[datetime
     Fetches raw OHLCV data from database.py, cleans it with clean_data(), and adds
     indicators (Gaussian, Kijun, VAPI, ADX, ATR, SMMA, swing) via indicators.py.
     Part of the Transform step in ETL, preparing data for backtest.py.
+
+    Args:
+        config: Application configuration for database and trading parameters.
+        ticker: Ticker symbol ('KC=F') to fetch data for.
+        start_date: Optional start date for data range (default: None).
+        end_date: Optional end date for data range (default: None).
+
+    Returns:
+        Optional[pd.DataFrame]: Transformed DataFrame with indicators, or None if no data or error.
     """
     raw_df = fetch_from_database(config=config, ticker=ticker, start_date=start_date, end_date=end_date)
     if raw_df is None or raw_df.empty:

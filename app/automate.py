@@ -24,9 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 def run_job() -> None:
-    """Execute the full ETL pipeline including data fetch, transform, and backtest.
+    """Executes the full ETL pipeline including data fetch, transform, and backtest.
     Logs start and end times, handles exceptions, and triggers main() to process
-    the entire workflow. Intended for daily execution via cron."""
+    the entire workflow. Intended for daily execution via cron.
+    """
     start_time = datetime.now()
     logger.info(f"ETL job started at {start_time}")
     try:

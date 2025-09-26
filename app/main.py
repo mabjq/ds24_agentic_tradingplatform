@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from app.data_fetch import fetch_data
 from app.database import init_database, save_to_database
 from app.transform import transform_data
@@ -10,7 +9,14 @@ from app.logger import setup_logging
 logger = logging.getLogger(__name__)
 
 def main():
-    """Main entry point: Run ETL pipeline and backtest."""
+    """Main entry point: Run ETL pipeline and backtest.
+    Orchestrates the full workflow: Initialize DB, fetch and save raw data,
+    transform with indicators, and execute backtest. Central coordinator
+    for the ETL process, logging each step.
+
+    Returns:
+        None.
+    """
     config = AppConfig()
     setup_logging(log_path=config.logging.app_log_path, level=config.logging.log_level)
     logger.info("Starting Agentic AI Trading Platform with Gaussian + Kijun Strategy")

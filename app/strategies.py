@@ -23,7 +23,7 @@ class GaussianKijunStrategy(bt.Strategy):
     )
 
     def __init__(self) -> None:
-        """Initiate and prepare variables."""
+        """Initiate and prepare variables for trade management and indicators."""
         cfg: AppConfig = self.p.app_config
         self.cfg = cfg.trading
 
@@ -46,6 +46,12 @@ class GaussianKijunStrategy(bt.Strategy):
         self.exit_order = None
 
     def log(self, txt: str, dt: Optional[datetime.datetime] = None) -> None:
+        """Log strategy events with timestamp.
+
+        Args:
+            txt: Message to log.
+            dt: Optional datetime for the log (default: current bar time).
+        """
         dt = dt or self.data.datetime.datetime(0)
         logger.debug(f"{dt.isoformat()} - {txt}")
 
@@ -119,7 +125,16 @@ class GaussianKijunStrategy(bt.Strategy):
                 self.log(self.close_reason)
 
     def _determine_size(self, entry: float, stop: float, short: bool = False) -> int:
-        """Return contract size using fixed USD size or risk-based sizing."""
+        """Return contract size using fixed USD size or risk-based sizing.
+
+        Args:
+            entry: Entry price for the trade.
+            stop: Stop-loss price for the trade.
+            short: Flag for short position (default: False).
+
+        Returns:
+            int: Calculated position size (contracts).
+        """
         if self.cfg.fixed_position_size > 0:
             usd = self.cfg.fixed_position_size
             return max(1, int(usd / entry))
@@ -128,6 +143,12 @@ class GaussianKijunStrategy(bt.Strategy):
     def _enter_long(self, close: float, size: int, stop: float, atr: float) -> None:
         """Initiate a long position with specified size, stop-loss, and take-profit.
         Sets custom TP1 (0.75R) and tracks initial ATR for trailing.
+
+        Args:
+            close: Current close price (entry price).
+            size: Number of contracts to buy.
+            stop: Initial stop-loss price.
+            atr: Current ATR value for trailing setup.
         """
         self.entry_order = self.buy(size=size)
         self.entry_price = close
@@ -143,6 +164,12 @@ class GaussianKijunStrategy(bt.Strategy):
     def _enter_short(self, close: float, size: int, stop: float, atr: float) -> None:
         """Initiate a short position with specified size, stop-loss, and take-profit.
         Sets custom TP1 (0.5R) and tracks initial ATR for trailing.
+
+        Args:
+            close: Current close price (entry price).
+            size: Number of contracts to sell.
+            stop: Initial stop-loss price.
+            atr: Current ATR value for trailing setup.
         """
         self.entry_order = self.sell(size=size)
         self.entry_price = close
@@ -158,6 +185,12 @@ class GaussianKijunStrategy(bt.Strategy):
     def _update_position_management(self, close: float, high: float, low: float, kijun_v: float) -> None:
         """Updates stop for breakeven and trailing.
         Implements custom breakeven (+0.4R), ATR trailing stop (ATR*3), and TP1 (40% partial).
+
+        Args:
+            close: Current close price.
+            high: Current high price.
+            low: Current low price.
+            kijun_v: Current Kijun-Sen value.
         """
         if self.entry_price is None or self.stop_price is None or self.entry_risk is None:
             return
@@ -227,6 +260,11 @@ class GaussianKijunStrategy(bt.Strategy):
                 self.log(self.close_reason)
 
     def notify_order(self, order) -> None:
+        """Handle order completion notifications.
+
+        Args:
+            order: Backtrader Order object.
+        """
         if order.status == order.Completed:
             if order.isbuy():
                 self.log(f"BUY EXECUTED, Price: {order.executed.price:.2f}, Size: {order.executed.size}")
@@ -234,12 +272,26 @@ class GaussianKijunStrategy(bt.Strategy):
                 self.log(f"SELL EXECUTED, Price: {order.executed.price:.2f}, Size: {order.executed.size}")
 
     def notify_trade(self, trade) -> None:
+        """Handle trade closure notifications and log PnL.
+
+        Args:
+            trade: Backtrader Trade object.
+        """
         if trade.isclosed:
             self.log(f"TRADE CLOSED: PnL Gross {trade.pnl:.2f}, Net {trade.pnlcomm:.2f}, Reason: {self.close_reason if self.close_reason else 'Unknown'}")
             self.close_reason = ""  # Reset for next trade
 
     def calculate_size(self, entry: float, stop: float, short: bool = False) -> int:
-        """Calculate position size based on risk."""
+        """Calculate position size based on risk.
+
+        Args:
+            entry: Entry price for the trade.
+            stop: Stop-loss price for the trade.
+            short: Flag for short position (default: False).
+
+        Returns:
+            int: Calculated position size (contracts) based on risk_pct.
+        """
         equity = self.broker.getvalue()
         risk_amount = equity * self.cfg.risk_pct
         distance = abs(entry - stop)

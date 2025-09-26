@@ -17,13 +17,20 @@ class TradeLogger(bt.Analyzer):
     Uses transaction history to extract actual entry and exit prices.
     Stores trade data in a list with fields like trade_id, entry_date, exit_date, PnL,
     and close_reason, handling both open and closed trades via notify_trade.
+    Integrated in backtest.py for detailed trade exports in ETL analysis step.
     """
     def __init__(self):
+        """Initialize trade logger with empty lists and counters."""
         self.trades: list[dict] = []
         self.trade_counter = 0
         self._open_trades: dict[int, dict] = {}
 
     def notify_trade(self, trade: bt.Trade) -> None:
+        """Handle trade notifications to log open and closed trades.
+
+        Args:
+            trade: Backtrader Trade object (open or closed).
+        """
         if trade.isopen and trade.ref not in self._open_trades:
             entry_date = num2date(trade.dtopen)
             self._open_trades[trade.ref] = {
@@ -58,13 +65,19 @@ class TradeLogger(bt.Analyzer):
             })
 
     def get_analysis(self):
+        """Return the collected trade data.
+
+        Returns:
+            list[dict]: List of trade dictionaries with detailed info.
+        """
         return self.trades
 
 
 class PandasDataExtended(bt.feeds.PandasData):
     """"Custom PandasData feed extending backtrader's feed to include indicator lines
     (gauss, kijun, vapi, smma, adx, atr, swing_high, swing_low) for use with
-    GaussianKijunStrategy."""
+    GaussianKijunStrategy. Prepares transformed data from indicators.py for backtesting.
+    """
     lines = ('gauss', 'kijun', 'vapi', 'smma', 'adx', 'atr', 'swing_high', 'swing_low')
     params = (
         ('datetime', None),
@@ -86,12 +99,20 @@ class PandasDataExtended(bt.feeds.PandasData):
 
 
 def run_backtest(df: pd.DataFrame, config: Optional[AppConfig] = None) -> Dict[str, Any]:
-    """
-    Runs a backtest using a DataFrame with OHLCV and indicators.
-    Takes a DataFrame `df` and optional `config` (AppConfig) to set parameters.
-    Saves input to 'backtest_input.csv', generates a plot, and exports summary/trade
-    details to CSV. Returns a dict with metrics like final_value, pnl, and winrate.
-    """
+    """Run backtest on DataFrame with OHLCV and indicators using backtrader.
+        Integrates strategy from strategies.py, custom analyzers, and saves results to CSV.
+        Generates plot via visualize.py. Focuses on simulation and metrics extraction
+        as the analysis step in ETL pipeline.
+
+        Args:
+            df: Input DataFrame with OHLCV and indicators from transform.py.
+            config: Optional application configuration for trading parameters
+                    (default: AppConfig()).
+
+        Returns:
+            Dict with backtest metrics: final_value, pnl, pnl_percent, max_drawdown_percent,
+            total_trades, percent_profitable, profit_factor.
+        """
     if config is None:
         config = AppConfig()
 
@@ -109,7 +130,11 @@ def run_backtest(df: pd.DataFrame, config: Optional[AppConfig] = None) -> Dict[s
         df_in.index = pd.to_datetime(df_in.index)
 
     # Validate required columns
-    required = ['Open', 'High', 'Low', 'Close', 'Volume', 'gauss', 'kijun', 'vapi', 'smma', 'adx', 'atr', 'swing_high', 'swing_low']
+    required = [
+        'Open', 'High', 'Low', 'Close', 'Volume',
+        'gauss', 'kijun', 'vapi', 'smma', 'adx',
+        'atr', 'swing_high', 'swing_low'
+    ]
     missing = [c for c in required if c not in df_in.columns]
     if missing:
         raise ValueError(f"Missing required columns for backtest: {missing}")
@@ -147,8 +172,12 @@ def run_backtest(df: pd.DataFrame, config: Optional[AppConfig] = None) -> Dict[s
     total_trades = trade_analyzer.get('total', {}).get('closed', 0)
     won_trades = trade_analyzer.get('won', {}).get('total', 0)
     percent_profitable = (won_trades / total_trades * 100) if total_trades > 0 else 0.0
-    profit_factor = (trade_analyzer.get('won', {}).get('pnl', {}).get('total', 0) /
-                     abs(trade_analyzer.get('lost', {}).get('pnl', {}).get('total', 0))) if trade_analyzer.get('lost', {}).get('pnl', {}).get('total', 0) != 0 else float('inf')
+    profit_factor = (
+        trade_analyzer.get('won', {}).get('pnl', {}).get('total', 0) /
+        abs(trade_analyzer.get('lost', {}).get('pnl', {}).get('total', 0))
+        if trade_analyzer.get('lost', {}).get('pnl', {}).get('total', 0) != 0
+        else float('inf')
+    )
 
     summary = {
         "final_value": final_value,
@@ -172,44 +201,29 @@ def run_backtest(df: pd.DataFrame, config: Optional[AppConfig] = None) -> Dict[s
         trades_detailed_path = "results/reports/trades_detailed.csv"
         trades_detailed_df.to_csv(trades_detailed_path, index=False)
 
-    # Transactions for plot (filtered to entry/exit pairs)
-    transactions = strat.analyzers.transactions.get_analysis()
-    trade_list = []
-    for dt, trans in transactions.items():
-        dt_converted = num2date(dt) if isinstance(dt, (int, float)) else pd.to_datetime(dt)
-        for t in trans:
-            price, size = t[0], t[1]
-            trade_list.append({'date': dt_converted, 'price': price, 'side': 'buy' if size > 0 else 'sell'})
-    trades_df = pd.DataFrame(trade_list)
+        logger.info(f"Trades being sent to plot: {len(trades_detailed_df)} rows")
+        logger.info(f"Trades head:\n{trades_detailed_df.head()}")
+        logger.info(f"DF date range: {df['Date'].min()} → {df['Date'].max()}")
 
-    if not trades_df.empty:
-        trades_df = trades_df.sort_values("date")
-        clean_rows = []
-        position = 0
-        for _, row in trades_df.iterrows():
-            side = row["side"]
-            if side == "buy":
-                if position == 0:
-                    clean_rows.append(row)
-                position += 1
-            else:  # sell
-                position -= 1
-                if position == 0:
-                    clean_rows.append(row)
-        trades_df = pd.DataFrame(clean_rows)
-
-    if not trades_df.empty:
         plot_with_trades(
             df_input=df,
-            trades=trades_df,
+            trades=trades_detailed_df,
+            symbol=config.trading.ticker,
+            save_path="results/plots/backtest_chart.png"
+        )
+    else:
+        logger.info("No trades found -> fallback to last 150 bars")
+        plot_with_trades(
+            df_input=df,
+            trades=pd.DataFrame(),
             symbol=config.trading.ticker,
             save_path="results/plots/backtest_chart.png"
         )
 
     return summary
 
-
 if __name__ == "__main__":
+    # Handles command-line arguments, making the script configurable
     import argparse
     from app.logger import setup_logging
 
